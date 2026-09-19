@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/TypeSafe/TypeSafe.csproj" />
+  <Project Path="tests/TypeSafe.Tests/TypeSafe.Tests.csproj" />
+  <Project Path="samples/TypeSafe.Sample/TypeSafe.Sample.csproj" />
+</Solution>
