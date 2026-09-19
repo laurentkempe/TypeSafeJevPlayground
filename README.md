@@ -1,4 +1,4 @@
-# Unofficial TypeSafe .NET SDK
+# Unofficial TypeSafe.ai .NET SDK
 
 An idiomatic .NET port of `typesafe-ai/typesafe-sdk-js` v0.6.0. The library targets
 `net11.0`, uses C# 15 and `System.Text.Json`, and has no runtime package dependencies.
