@@ -3,6 +3,12 @@
 An idiomatic .NET port of `typesafe-ai/typesafe-sdk-js` v0.6.0. The library targets
 `net11.0`, uses C# 15 and `System.Text.Json`, and has no runtime package dependencies.
 
+> [!IMPORTANT]
+> This is an unofficial, vibe coded community port and is not supported by TypeSafe. Use it at your own risk.
+
+> [!Note]
+Code for my blog post "[TypeSafe's Jev AI Model in .NET: A Community SDK for Structured AI Output in C#](https://laurentkempe.com/2026/09/19/typesafe-jev-dotnet-sdk-introduction/)"
+
 ## Quickstart
 
 The upstream JavaScript call is `client.systemOne({ state, questions })`. Its .NET
