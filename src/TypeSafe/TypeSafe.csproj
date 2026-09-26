@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
+    <IsAotCompatible>true</IsAotCompatible>
     <PackageId>TypeSafe</PackageId>
     <Version>0.6.0</Version>
     <Description>Idiomatic .NET SDK for TypeSafe AI.</Description>

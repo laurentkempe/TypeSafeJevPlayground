@@ -70,3 +70,13 @@ Claude Desktop (`claude_desktop_config.json`):
 
 Without installing the tool, you can run it from source with
 `"command": "dotnet", "args": ["run", "--project", "path/to/src/TypeSafe.Mcp"]`.
+
+## Native AOT
+
+Publishing from source produces a Native AOT, self-contained executable that starts fast and needs no .NET runtime:
+
+```bash
+dotnet publish src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release -r win-x64 -o ./publish
+```
+
+Then set the client's `command` to the published `TypeSafe.Mcp` executable.

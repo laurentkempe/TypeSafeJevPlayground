@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -5,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace TypeSafe;
 
@@ -22,6 +24,12 @@ public sealed class TypeSafeClient : IDisposable
 
     internal static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
+    internal static JsonTypeInfo<T> TypeInfo<T>() => (JsonTypeInfo<T>)JsonOptions.GetTypeInfo(typeof(T));
+
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "The reflection resolver is only added when reflection-based serialization is enabled.")]
+    [UnconditionalSuppressMessage("AOT", "IL3050",
+        Justification = "The reflection resolver is only added when reflection-based serialization is enabled.")]
     private static JsonSerializerOptions CreateJsonOptions()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
@@ -31,7 +39,7 @@ public sealed class TypeSafeClient : IDisposable
         options.TypeInfoResolverChain.Add(TypeSafeJsonSerializerContext.Default);
         if (JsonSerializer.IsReflectionEnabledByDefault)
         {
-            options.TypeInfoResolverChain.Add(new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver());
+            options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
         }
         return options;
     }
@@ -78,7 +86,7 @@ public sealed class TypeSafeClient : IDisposable
         return SendAsync(
             "/v1/systemone",
             HttpMethod.Post,
-            JsonSerializer.Serialize(payload, JsonOptions),
+            JsonSerializer.Serialize(payload, TypeInfo<SystemOneRequest>()),
             ParseSystemOne,
             requestOptions,
             cancellationToken);
@@ -399,8 +407,9 @@ public sealed class TypeSafeClient : IDisposable
         {
             try
             {
-                json = JsonSerializer.Deserialize<JsonElement>(text);
-                body = json.Value.Clone();
+                using var document = JsonDocument.Parse(text);
+                json = document.RootElement.Clone();
+                body = json.Value;
             }
             catch (JsonException)
             {
@@ -533,7 +542,7 @@ public sealed class TypeSafeClient : IDisposable
 
         try
         {
-            var result = models.Deserialize<List<ModelCard>>(JsonOptions)
+            var result = models.Deserialize(TypeInfo<List<ModelCard>>())
                 ?? throw new JsonException("models was null");
             if (result.Any(model => model.Name is null || model.Description is null || model.ReleaseDate is null))
                 throw new JsonException("a model entry is missing required fields");
@@ -568,11 +577,11 @@ public sealed class TypeSafeClient : IDisposable
             {
                 Answer answer = typeElement.GetString() switch
                 {
-                    "noul" => property.Value.Deserialize<NoulAnswer>(JsonOptions)
+                    "noul" => property.Value.Deserialize(TypeInfo<NoulAnswer>())
                         ?? throw new JsonException("noul answer was null"),
-                    "choice" => property.Value.Deserialize<ChoiceAnswer>(JsonOptions)
+                    "choice" => property.Value.Deserialize(TypeInfo<ChoiceAnswer>())
                         ?? throw new JsonException("choice answer was null"),
-                    "score" => property.Value.Deserialize<ScoreAnswer>(JsonOptions)
+                    "score" => property.Value.Deserialize(TypeInfo<ScoreAnswer>())
                         ?? throw new JsonException("score answer was null"),
                     var type => throw new TypeSafeError(
                         $"Malformed answer '{property.Name}': unknown type '{type}'.")

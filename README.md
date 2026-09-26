@@ -210,6 +210,18 @@ dotnet pack src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release -o ./nupkg
 dotnet tool install -g TypeSafe.Mcp --add-source ./nupkg
 ```
 
+`dotnet publish` produces a Native AOT, self-contained executable that needs no .NET runtime
+(the C++ build tools for your platform are required, see
+[Native AOT prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/#prerequisites)):
+
+```bash
+dotnet publish src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release -r win-x64 -o ./publish
+```
+
+Use the matching runtime identifier (`linux-x64`, `osx-arm64`, …) and point the MCP client's `command`
+at `./publish/TypeSafe.Mcp(.exe)`. The `TypeSafe` SDK and the server use source-generated JSON only, so the
+build is free of trimming and AOT warnings. `dotnet pack` still produces the framework-dependent global tool.
+
 ## Building and testing
 
 ```bash

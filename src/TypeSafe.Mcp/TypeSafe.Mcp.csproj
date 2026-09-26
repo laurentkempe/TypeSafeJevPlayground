@@ -18,6 +18,11 @@
     <RepositoryUrl>https://github.com/typesafe-ai/typesafe-sdk-dotnet</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
     <None Include=".mcp\server.json" Pack="true" PackagePath="\.mcp\" />

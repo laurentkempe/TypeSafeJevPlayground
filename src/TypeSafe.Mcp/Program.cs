@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TypeSafe.Mcp.Tools;
 
 namespace TypeSafe.Mcp;
 
@@ -40,7 +41,7 @@ public static class Program
         builder.Services
             .AddMcpServer()
             .WithStdioServerTransport()
-            .WithToolsFromAssembly(typeof(Program).Assembly);
+            .WithTools<TypeSafeTools>(McpToolJson.Options);
 
         return builder;
     }

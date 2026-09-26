@@ -109,7 +109,8 @@ internal static class EntryType
 
         try
         {
-            var kind = JsonSerializer.SerializeToElement(value, TypeSafeClient.JsonOptions).ValueKind;
+            var typeInfo = TypeSafeClient.JsonOptions.GetTypeInfo(value.GetType());
+            var kind = JsonSerializer.SerializeToElement(value, typeInfo).ValueKind;
             if (kind is JsonValueKind.Object or JsonValueKind.Array)
                 return;
         }
@@ -235,6 +236,24 @@ public sealed record ModelCard
 [JsonSerializable(typeof(ChoiceAnswer))]
 [JsonSerializable(typeof(ScoreAnswer))]
 [JsonSerializable(typeof(Usage))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(bool))]
+[JsonSerializable(typeof(int))]
+[JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(double))]
+[JsonSerializable(typeof(decimal))]
+[JsonSerializable(typeof(JsonElement))]
+[JsonSerializable(typeof(JsonDocument))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonNode))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonObject))]
+[JsonSerializable(typeof(System.Text.Json.Nodes.JsonArray))]
+[JsonSerializable(typeof(object[]))]
+[JsonSerializable(typeof(string[]))]
+[JsonSerializable(typeof(List<object?>))]
+[JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(Dictionary<string, object?>))]
+[JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(Dictionary<string, JsonElement>))]
 public partial class TypeSafeJsonSerializerContext : JsonSerializerContext
 {
 }
