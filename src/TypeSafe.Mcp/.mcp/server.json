@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.typesafe-ai/typesafe-mcp",
+  "description": "Ask TypeSafe AI System One Noul, Choice and Score questions from any MCP client.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/typesafe-ai/typesafe-sdk-dotnet",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "nuget",
+      "identifier": "TypeSafe.Mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "TYPESAFE_API_KEY",
+          "description": "TypeSafe API key.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "TYPESAFE_DEFAULT_MODEL",
+          "description": "Default model (jev-latest when unset).",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

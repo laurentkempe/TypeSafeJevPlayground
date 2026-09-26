@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>15.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TypeSafe.Mcp</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>typesafe-mcp</ToolCommandName>
+    <RollForward>Major</RollForward>
+    <PackageId>TypeSafe.Mcp</PackageId>
+    <PackageType>McpServer;DotnetTool</PackageType>
+    <Version>0.1.0</Version>
+    <Description>MCP server (stdio) exposing TypeSafe AI System One (Noul, Choice, Score) as tools.</Description>
+    <PackageTags>mcp;modelcontextprotocol;typesafe;ai</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/typesafe-ai/typesafe-sdk-dotnet</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include=".mcp\server.json" Pack="true" PackagePath="\.mcp\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="11.0.0-rc.1.26425.128" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TypeSafe\TypeSafe.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="TypeSafe.Mcp.Tests" />
+  </ItemGroup>
+</Project>

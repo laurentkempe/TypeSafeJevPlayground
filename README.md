@@ -154,11 +154,68 @@ Point the sample at a different host with `TYPESAFE_BASE_URL`, or change the
 model with `TYPESAFE_DEFAULT_MODEL`. Press Ctrl+C to cancel an in-flight
 request; the sample surfaces this as `ApiUserAbortError`.
 
+## MCP server (`TypeSafe.Mcp`)
+
+`src/TypeSafe.Mcp` is a stdio [Model Context Protocol](https://modelcontextprotocol.io) server built
+on the official C# MCP SDK. It lets any MCP client (Claude Desktop, VS Code, Rider, Cursor…) ask
+System One questions. It ships as a .NET global tool and requires the .NET 11 runtime.
+
+```bash
+dotnet tool install -g TypeSafe.Mcp
+```
+
+The API key comes from `--api-key`, then `TypeSafe__ApiKey`, then `TYPESAFE_API_KEY`. `--base-url`
+and `--model` follow the same pattern (falling back to `TYPESAFE_BASE_URL` and
+`TYPESAFE_DEFAULT_MODEL`). The server starts without a key and reports a tool error until one is set.
+
+| Tool | What it does |
+|---|---|
+| `typesafe_noul` | Probability (0–1) that a yes/no statement about the state is true. |
+| `typesafe_choice` | Picks one label from an unordered set, with a probability per label. |
+| `typesafe_score` | Places the state on an ordered rubric (≥ 2 levels) and returns a weighted score. |
+| `typesafe_evaluate` | Any mix of named noul/choice/score questions about the same state in one request. |
+| `typesafe_list_models` | Lists the models available to your key. |
+
+VS Code / Rider `mcp.json`:
+
+```json
+{
+  "servers": {
+    "typesafe": {
+      "type": "stdio",
+      "command": "typesafe-mcp",
+      "env": { "TYPESAFE_API_KEY": "sk-..." }
+    }
+  }
+}
+```
+
+Claude Desktop `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "typesafe": {
+      "command": "typesafe-mcp",
+      "env": { "TYPESAFE_API_KEY": "sk-..." }
+    }
+  }
+}
+```
+
+To try a local build, pack and install from the output folder:
+
+```bash
+dotnet pack src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release -o ./nupkg
+dotnet tool install -g TypeSafe.Mcp --add-source ./nupkg
+```
+
 ## Building and testing
 
 ```bash
 dotnet build TypeSafe.slnx -c Release
 dotnet test TypeSafe.slnx -c Release
 dotnet pack src/TypeSafe/TypeSafe.csproj -c Release
+dotnet pack src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release
 ```
 
