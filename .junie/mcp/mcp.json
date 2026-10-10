@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "typesafe": {
+      "type": "stdio",
+      "command": "typesafe-mcp"
+    }
+  }
+}
