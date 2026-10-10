@@ -47,9 +47,7 @@ public sealed class TypeSafeClientOptions
             ? new Uri("https://api.typesafe.ai")
             : CreateUri(baseText, "TYPESAFE_BASE_URL"));
         var baseUrl = CreateUri(configuredBaseUrl.AbsoluteUri.TrimEnd('/'), nameof(BaseUrl));
-        var model = DefaultModel is null
-            ? Env("TYPESAFE_DEFAULT_MODEL") ?? "jev-latest"
-            : DefaultModel;
+        var model = DefaultModel ?? (Env("TYPESAFE_DEFAULT_MODEL") ?? "jev-latest");
         if (string.IsNullOrWhiteSpace(model))
             throw new TypeSafeError("DefaultModel cannot be blank.");
         model = model.Trim();
