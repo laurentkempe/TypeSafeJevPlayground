@@ -7,7 +7,9 @@ An idiomatic .NET port of `typesafe-ai/typesafe-sdk-js` v0.6.0. The library targ
 > This is an unofficial, vibe coded community port and is not supported by TypeSafe. Use it at your own risk.
 
 > [!Note]
-Code for my blog post "[TypeSafe's Jev AI Model in .NET: A Community SDK for Structured AI Output in C#](https://laurentkempe.com/2026/09/19/typesafe-jev-dotnet-sdk-introduction/)"
+Code for my blog posts
+1. "[TypeSafe's Jev AI Model in .NET: A Community SDK for Structured AI Output in C#](https://laurentkempe.com/2026/09/19/typesafe-jev-dotnet-sdk-introduction/)"
+2. "[Building a TypeSafe's Jev MCP server with .NET](https://laurentkempe.com/2026/10/10/building-a-typesafe-jev-mcp-server-dotnet/)"
 
 ## Quickstart
 
