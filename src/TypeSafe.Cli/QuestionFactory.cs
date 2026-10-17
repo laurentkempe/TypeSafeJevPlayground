@@ -67,6 +67,12 @@ public static class QuestionFactory
         return Questions.Score(instructions!, levels.Select(level => (object?)level).ToList());
     }
 
+    public static BoxQuestion Box(string? instructions)
+    {
+        RequireInstructions(instructions);
+        return Questions.Box(instructions);
+    }
+
     private static void RequireInstructions(string? instructions)
     {
         if (string.IsNullOrWhiteSpace(instructions))

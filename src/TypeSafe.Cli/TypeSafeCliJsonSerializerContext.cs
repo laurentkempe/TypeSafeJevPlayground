@@ -10,6 +10,7 @@ namespace TypeSafe.Cli;
 [JsonSerializable(typeof(EvaluationResult))]
 [JsonSerializable(typeof(AnswerResult))]
 [JsonSerializable(typeof(UsageResult))]
+[JsonSerializable(typeof(BoxCoordinates))]
 [JsonSerializable(typeof(ModelCard))]
 [JsonSerializable(typeof(IReadOnlyList<ModelCard>))]
 [JsonSerializable(typeof(List<ModelCard>))]

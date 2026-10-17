@@ -21,7 +21,7 @@ public static class OutputFormatter
 
         outWriter.WriteLine("TypeSafe System One Evaluation");
         outWriter.WriteLine($"Model: {result.Model}");
-        outWriter.WriteLine($"Tokens: {result.Usage.InputTokens} in / {result.Usage.OutputTokens} out");
+        outWriter.WriteLine($"Tokens: {FormatTokens(result.Usage.InputTokens)} in / {FormatTokens(result.Usage.OutputTokens)} out");
         outWriter.WriteLine();
 
         if (result.Answers.Count == 1 && result.Answers.ContainsKey("result"))
@@ -80,6 +80,12 @@ public static class OutputFormatter
         errWriter.WriteLine($"[verbose] {message}");
     }
 
+    private static string FormatTokens(int? tokens) =>
+        tokens?.ToString(CultureInfo.InvariantCulture) ?? "n/a";
+
+    private static string FormatCoordinate(double value) =>
+        value.ToString("0.####", CultureInfo.InvariantCulture);
+
     private static void WriteAnswerBody(AnswerResult answer, TextWriter writer, string indent)
     {
         switch (answer.Type.ToLowerInvariant())
@@ -128,6 +134,13 @@ public static class OutputFormatter
                         writer.WriteLine($"{indent}  • {lvl}: {p * 100:0.0}%");
                     }
                 }
+                break;
+
+            case "box" when answer.Box is not null:
+                var box = answer.Box;
+                var boxConfidence = answer.Confidence.HasValue ? $"{answer.Confidence.Value * 100:0.0}%" : "unknown";
+                writer.WriteLine($"{indent}Box: top={FormatCoordinate(box.Top)}, bottom={FormatCoordinate(box.Bottom)}, left={FormatCoordinate(box.Left)}, right={FormatCoordinate(box.Right)}");
+                writer.WriteLine($"{indent}Confidence: {boxConfidence}");
                 break;
 
             default:

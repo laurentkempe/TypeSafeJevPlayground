@@ -48,7 +48,7 @@ public sealed class CliTestHarness : IDisposable
         };
 
         var rootCommand = RootCommandBuilder.Build(context);
-        var exitCode = await rootCommand.Parse(args).InvokeAsync();
+        var exitCode = await rootCommand.Parse(args, RootCommandBuilder.ParserConfiguration).InvokeAsync();
 
         return new CliExecutionResult(
             exitCode,

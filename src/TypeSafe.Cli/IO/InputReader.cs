@@ -2,6 +2,31 @@ namespace TypeSafe.Cli.IO;
 
 public static class InputReader
 {
+    /// <summary>
+    /// Reads the state like <see cref="ReadStateAsync"/>, but returns an <see cref="Image"/> when the
+    /// state is an <c>@filepath</c> pointing to a PNG or JPEG file, and parsed JSON/text otherwise.
+    /// </summary>
+    public static async Task<object> ReadStateValueAsync(
+        string? stateArgument,
+        TextReader? stdin = null,
+        bool? isInputRedirected = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (stateArgument is { Length: > 1 } && stateArgument.StartsWith('@'))
+        {
+            var filePath = stateArgument[1..];
+            if (File.Exists(filePath))
+            {
+                var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
+                if (ImageInput.IsSupportedImage(bytes))
+                    return new Image(bytes);
+            }
+        }
+
+        var text = await ReadStateAsync(stateArgument, stdin, isInputRedirected, cancellationToken).ConfigureAwait(false);
+        return StateParser.Parse(text);
+    }
+
     public static async Task<string> ReadStateAsync(
         string? stateArgument,
         TextReader? stdin = null,

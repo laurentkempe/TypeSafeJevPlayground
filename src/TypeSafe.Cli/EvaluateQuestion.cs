@@ -47,7 +47,8 @@ public sealed record EvaluateQuestion
                 "noul" => QuestionFactory.Noul(Instructions, TrueCriteria, FalseCriteria),
                 "choice" => QuestionFactory.Choice(Instructions, Choices),
                 "score" => QuestionFactory.Score(Instructions, Levels),
-                _ => throw new TypeSafeError($"unknown type '{Type}'. Expected 'noul', 'choice' or 'score'.")
+                "box" => QuestionFactory.Box(Instructions),
+                _ => throw new TypeSafeError($"unknown type '{Type}'. Expected 'noul', 'choice', 'score' or 'box'.")
             };
         }
         catch (TypeSafeError exception)

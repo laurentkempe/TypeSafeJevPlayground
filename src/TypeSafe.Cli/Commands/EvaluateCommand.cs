@@ -9,7 +9,7 @@ public static class EvaluateCommand
 {
     public static Command Create(CliContext context, GlobalOptionDefinitions globals)
     {
-        var command = new Command("evaluate", "Ask any mix of named noul, choice and score questions in a single request.");
+        var command = new Command("evaluate", "Ask any mix of named noul, choice, score and box questions in a single request.");
 
         var stateArg = new Argument<string?>("state")
         {
@@ -27,9 +27,12 @@ public static class EvaluateCommand
             Description = "Inline JSON string containing questions dictionary."
         };
 
+        var imageOption = SystemOneRunner.CreateImageOption();
+
         command.Add(stateArg);
         command.Add(fileOption);
         command.Add(questionsOption);
+        command.Add(imageOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -37,6 +40,7 @@ public static class EvaluateCommand
             var stateRaw = parseResult.GetValue(stateArg);
             var filePath = parseResult.GetValue(fileOption);
             var inlineQuestions = parseResult.GetValue(questionsOption);
+            var imageArguments = parseResult.GetValue(imageOption) ?? [];
 
             return await CommandExecutor.ExecuteAsync(context, globalOptions, async (client, ct) =>
             {
@@ -89,22 +93,8 @@ public static class EvaluateCommand
                     throw new CliValidationException($"Failed to parse questions JSON: {ex.Message}", ex);
                 }
 
-                OutputFormatter.WriteVerbose($"Reading state input...", globalOptions.Verbose, context.Error);
-                var stateText = await InputReader.ReadStateAsync(effectiveState, context.In, context.IsInputRedirected, ct).ConfigureAwait(false);
-                var stateObj = StateParser.Parse(stateText);
-
-                var request = new SystemOneRequest
-                {
-                    State = stateObj,
-                    Questions = questions,
-                    Model = globalOptions.Model
-                };
-
-                OutputFormatter.WriteVerbose($"Sending batch evaluation request with {questions.Count} question(s)...", globalOptions.Verbose, context.Error);
-                var result = await client.SystemOneAsync(request, cancellationToken: ct).ConfigureAwait(false);
-                var evalResult = ResultMapper.Map(result);
-
-                OutputFormatter.WriteEvaluation(evalResult, globalOptions.Json, context.Out);
+                await SystemOneRunner.RunAsync(context, globalOptions, client, effectiveState, questions, imageArguments, ct)
+                    .ConfigureAwait(false);
             }, cancellationToken);
         });
 

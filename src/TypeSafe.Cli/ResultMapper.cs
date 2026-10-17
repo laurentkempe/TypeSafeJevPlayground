@@ -22,6 +22,7 @@ public static class ResultMapper
             Confidence: score.Confidence,
             Probabilities: score.Probabilities,
             Legend: score.Legend),
+        BoxAnswer box => new AnswerResult("box", Confidence: box.Confidence, Box: box.Box),
         _ => new AnswerResult(answer.Type)
     };
 }

@@ -1,6 +1,4 @@
 using System.CommandLine;
-using TypeSafe.Cli.Formatting;
-using TypeSafe.Cli.IO;
 
 namespace TypeSafe.Cli.Commands;
 
@@ -32,10 +30,13 @@ public static class NoulCommand
             Description = "Optional description of what makes the statement false."
         };
 
+        var imageOption = SystemOneRunner.CreateImageOption();
+
         command.Add(stateArg);
         command.Add(instructionsArg);
         command.Add(trueCriteriaOption);
         command.Add(falseCriteriaOption);
+        command.Add(imageOption);
 
         command.SetAction(async (parseResult, cancellationToken) =>
         {
@@ -44,6 +45,7 @@ public static class NoulCommand
             var instructionsRaw = parseResult.GetValue(instructionsArg);
             var trueCriteria = parseResult.GetValue(trueCriteriaOption);
             var falseCriteria = parseResult.GetValue(falseCriteriaOption);
+            var imageArguments = parseResult.GetValue(imageOption) ?? [];
 
             return await CommandExecutor.ExecuteAsync(context, globalOptions, async (client, ct) =>
             {
@@ -62,23 +64,15 @@ public static class NoulCommand
                     throw new CliValidationException("Instructions argument is required.");
                 }
 
-                OutputFormatter.WriteVerbose($"Reading state input...", globalOptions.Verbose, context.Error);
-                var stateText = await InputReader.ReadStateAsync(effectiveState, context.In, context.IsInputRedirected, ct).ConfigureAwait(false);
-                var stateObj = StateParser.Parse(stateText);
-
                 var question = QuestionFactory.Noul(effectiveInstructions, trueCriteria, falseCriteria);
-                var request = new SystemOneRequest
-                {
-                    State = stateObj,
-                    Questions = new Dictionary<string, Question> { ["result"] = question },
-                    Model = globalOptions.Model
-                };
-
-                OutputFormatter.WriteVerbose($"Sending evaluation request to TypeSafe API...", globalOptions.Verbose, context.Error);
-                var result = await client.SystemOneAsync(request, cancellationToken: ct).ConfigureAwait(false);
-                var evalResult = ResultMapper.Map(result);
-
-                OutputFormatter.WriteEvaluation(evalResult, globalOptions.Json, context.Out);
+                await SystemOneRunner.RunAsync(
+                    context,
+                    globalOptions,
+                    client,
+                    effectiveState,
+                    new Dictionary<string, Question> { ["result"] = question },
+                    imageArguments,
+                    ct).ConfigureAwait(false);
             }, cancellationToken);
         });
 

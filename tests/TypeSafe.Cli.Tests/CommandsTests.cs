@@ -352,4 +352,202 @@ public sealed class CommandsTests
         Assert.Equal(1, result.ExitCode);
         Assert.Contains("TypeSafe API error: 400 Invalid state payload (request id: req-12345)", result.StdErr);
     }
+
+    private const string BoxSuccessResponse = """
+        {
+          "model": "jev-preview",
+          "answers": {
+            "result": {
+              "type": "box",
+              "box": { "top": 0.1, "bottom": 0.75, "left": 0.2, "right": 0.6 },
+              "confidence": null
+            }
+          },
+          "usage": {
+            "input_tokens": null,
+            "output_tokens": 3
+          }
+        }
+        """;
+
+    private static readonly byte[] PngBytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4];
+
+    private static (CliTestHarness Harness, List<(HttpRequestMessage Request, string Body)> Captured) CreateCapturingHarness(string responseJson)
+    {
+        var captured = new List<(HttpRequestMessage, string)>();
+        var harness = new CliTestHarness(request =>
+        {
+            captured.Add((request, request.Content!.ReadAsStringAsync().GetAwaiter().GetResult()));
+            return MockHttpMessageHandler.CreateJsonResponse(responseJson);
+        });
+        return (harness, captured);
+    }
+
+    private static async Task<T> WithDefaultModelUnsetAsync<T>(Func<Task<T>> action)
+    {
+        var previous = Environment.GetEnvironmentVariable("TYPESAFE_DEFAULT_MODEL");
+        try
+        {
+            Environment.SetEnvironmentVariable("TYPESAFE_DEFAULT_MODEL", null);
+            return await action();
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("TYPESAFE_DEFAULT_MODEL", previous);
+        }
+    }
+
+    [Fact]
+    public async Task Box_ImageFileState_SendsMultipartImageRequestWithPreviewModel()
+    {
+        var (harness, captured) = CreateCapturingHarness(BoxSuccessResponse);
+        using var harnessScope = harness;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(imagePath, PngBytes);
+        try
+        {
+            var result = await WithDefaultModelUnsetAsync(() =>
+                harness.RunAsync(["box", $"@{imagePath}", "Locate the pig", "--api-key", "test-key"]));
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("Tokens: n/a in / 3 out", result.StdOut);
+            Assert.Contains("Box: top=0.1, bottom=0.75, left=0.2, right=0.6", result.StdOut);
+            Assert.Contains("Confidence: unknown", result.StdOut);
+
+            var (request, body) = Assert.Single(captured);
+            Assert.Equal("true", Assert.Single(request.Headers.GetValues("TypeSafe-Danger-Zone-Images")));
+            Assert.Equal("multipart/form-data", request.Content!.Headers.ContentType!.MediaType);
+            Assert.Contains("\"model\":\"jev-preview\"", body);
+            Assert.Contains("\"type\":\"box\"", body);
+            Assert.Contains("\"assets\":{", body);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
+    [Fact]
+    public async Task Box_ExplicitModel_IsNotOverridden()
+    {
+        var (harness, captured) = CreateCapturingHarness(BoxSuccessResponse);
+        using var harnessScope = harness;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(imagePath, PngBytes);
+        try
+        {
+            var result = await harness.RunAsync(["box", $"@{imagePath}", "Locate the pig", "-m", "custom-model", "--api-key", "test-key"]);
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("\"model\":\"custom-model\"", Assert.Single(captured).Body);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
+    [Fact]
+    public async Task Box_JsonMode_OutputsBoxAndNullableFields()
+    {
+        var (harness, _) = CreateCapturingHarness(BoxSuccessResponse);
+        using var harnessScope = harness;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(imagePath, PngBytes);
+        try
+        {
+            var result = await harness.RunAsync(["box", $"@{imagePath}", "Locate the pig", "--json", "--api-key", "test-key"]);
+
+            Assert.Equal(0, result.ExitCode);
+            using var doc = JsonDocument.Parse(result.StdOut);
+            var answer = doc.RootElement.GetProperty("answers").GetProperty("result");
+            Assert.Equal("box", answer.GetProperty("type").GetString());
+            Assert.Equal(0.75, answer.GetProperty("box").GetProperty("bottom").GetDouble(), 2);
+            Assert.Equal(JsonValueKind.Null, doc.RootElement.GetProperty("usage").GetProperty("input_tokens").ValueKind);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
+    [Fact]
+    public async Task Noul_ImageOption_AttachesNamedAsset()
+    {
+        var (harness, captured) = CreateCapturingHarness(NoulSuccessResponse);
+        using var harnessScope = harness;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(imagePath, PngBytes);
+        try
+        {
+            var result = await harness.RunAsync([
+                "noul", "Photo: <photo>", "Does the photo show an animal?",
+                "--image", $"photo={imagePath}",
+                "--api-key", "test-key"
+            ]);
+
+            Assert.Equal(0, result.ExitCode);
+            var (request, body) = Assert.Single(captured);
+            Assert.True(request.Headers.Contains("TypeSafe-Danger-Zone-Images"));
+            Assert.Contains("\"assets\":{\"\\u003Cphoto\\u003E\":{\"type\":\"image\"", body);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
+    [Fact]
+    public async Task Noul_TextOnly_DoesNotSendImagesHeader()
+    {
+        var (harness, captured) = CreateCapturingHarness(NoulSuccessResponse);
+        using var harnessScope = harness;
+
+        var result = await harness.RunAsync(["noul", "plain text", "Is this text?", "--api-key", "test-key"]);
+
+        Assert.Equal(0, result.ExitCode);
+        var (request, _) = Assert.Single(captured);
+        Assert.False(request.Headers.Contains("TypeSafe-Danger-Zone-Images"));
+        Assert.Equal("application/json", request.Content!.Headers.ContentType!.MediaType);
+    }
+
+    [Fact]
+    public async Task Evaluate_BoxQuestion_UsesPreviewModel()
+    {
+        var (harness, captured) = CreateCapturingHarness(BoxSuccessResponse.Replace("\"result\"", "\"pig\""));
+        using var harnessScope = harness;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.png");
+        await File.WriteAllBytesAsync(imagePath, PngBytes);
+        try
+        {
+            var result = await WithDefaultModelUnsetAsync(() => harness.RunAsync([
+                "evaluate", $"@{imagePath}",
+                "--questions", """{ "pig": { "type": "box", "instructions": "Locate the pig" } }""",
+                "--api-key", "test-key"
+            ]));
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("[pig] (box)", result.StdOut);
+            Assert.Contains("\"model\":\"jev-preview\"", Assert.Single(captured).Body);
+        }
+        finally
+        {
+            File.Delete(imagePath);
+        }
+    }
+
+    [Fact]
+    public async Task Image_MissingFile_ExitCode2()
+    {
+        using var harness = new CliTestHarness(MockHttpMessageHandler.CreateJsonResponse(NoulSuccessResponse));
+
+        var result = await harness.RunAsync([
+            "noul", "<photo>", "Is there a dog?",
+            "--image", "photo=does-not-exist.png",
+            "--api-key", "test-key"
+        ]);
+
+        Assert.Equal(2, result.ExitCode);
+        Assert.Contains("Image file not found", result.StdErr);
+    }
 }

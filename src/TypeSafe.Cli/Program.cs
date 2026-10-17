@@ -7,6 +7,6 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         var rootCommand = RootCommandBuilder.Build();
-        return await rootCommand.Parse(args).InvokeAsync();
+        return await rootCommand.Parse(args, RootCommandBuilder.ParserConfiguration).InvokeAsync();
     }
 }
