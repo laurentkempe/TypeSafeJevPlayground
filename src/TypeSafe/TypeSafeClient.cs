@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
@@ -12,14 +13,14 @@ namespace TypeSafe;
 
 public sealed class TypeSafeClient : IDisposable
 {
-    private const string SdkValue = "typesafe-sdk/0.6.0";
+    private const string SdkValue = "typesafe-sdk/0.7.0";
     private static readonly IReadOnlyDictionary<string, string> EmptyHeaders =
         new System.Collections.ObjectModel.ReadOnlyDictionary<string, string>(
             new Dictionary<string, string>());
     private static readonly HashSet<string> ProtectedHeaders = new(StringComparer.OrdinalIgnoreCase)
     {
         "accept", "authorization", "content-type", "user-agent", "x-typesafe-sdk",
-        "x-typesafe-runtime", "x-typesafe-retry-count"
+        "x-typesafe-runtime", "x-typesafe-retry-count", "content-encoding", "content-length"
     };
 
     internal static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -34,7 +35,8 @@ public sealed class TypeSafeClient : IDisposable
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
         {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
         };
         options.TypeInfoResolverChain.Add(TypeSafeJsonSerializerContext.Default);
         if (JsonSerializer.IsReflectionEnabledByDefault)
@@ -63,6 +65,7 @@ public sealed class TypeSafeClient : IDisposable
     public string DefaultModel => _options.DefaultModel;
     public TypeSafeLogLevel LogLevel => _options.LogLevel;
     public TimeSpan Timeout => _options.Timeout;
+    public bool Compression => _options.Compression;
     public RetryPolicy Retry => _options.Retry;
     public IReadOnlyDictionary<string, string> DefaultHeaders => _options.DefaultHeaders ?? EmptyHeaders;
 
@@ -76,20 +79,39 @@ public sealed class TypeSafeClient : IDisposable
         return response.Data;
     }
 
-    public Task<ApiResponse<SystemOneResult>> SystemOneWithResponseAsync(
+    public async Task<ApiResponse<SystemOneResult>> SystemOneWithResponseAsync(
         SystemOneRequest request,
         RequestOptions? requestOptions = null,
         CancellationToken cancellationToken = default)
     {
         ValidateRequest(request);
         var payload = request.Model is null ? request with { Model = _options.DefaultModel } : request;
-        return SendAsync(
+        using var content = AssetSerialization.Serialize(payload);
+        RequestBody body;
+        try
+        {
+            var bytes = await content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            var compressed = Compression && bytes.Length >= 1024;
+            if (compressed)
+            {
+                using var output = new MemoryStream();
+                await using (var zstd = new ZstandardStream(output, CompressionLevel.Optimal, leaveOpen: true))
+                    await zstd.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+                bytes = output.ToArray();
+            }
+            body = new RequestBody(bytes, content.Headers.ContentType!.ToString(), compressed);
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            throw new ApiUserAbortError("Request was cancelled by the caller.", exception);
+        }
+        return await SendAsync(
             "/v1/systemone",
             HttpMethod.Post,
-            JsonSerializer.Serialize(payload, TypeInfo<SystemOneRequest>()),
+            body,
             ParseSystemOne,
             requestOptions,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<ModelCard>> ModelsAsync(
@@ -108,7 +130,12 @@ public sealed class TypeSafeClient : IDisposable
     private static void ValidateRequest(SystemOneRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (IsNull(request.State))
+            throw new TypeSafeError("State is required.");
         EntryType.Validate(request.State, nameof(request.State));
+        if (request.AdditionalProperties is { } properties &&
+            properties.Keys.Any(key => key is "state" or "questions" or "model" or "assets"))
+            throw new TypeSafeError("AdditionalProperties cannot override state, questions, model, or assets.");
         if (request.Questions is null || request.Questions.Count == 0)
             throw new TypeSafeError("Questions cannot be empty.");
 
@@ -122,6 +149,9 @@ public sealed class TypeSafeClient : IDisposable
             switch (question)
             {
                 case NoulQuestion noul:
+                    if (IsNull(noul.Instructions) &&
+                        (noul.Criteria is null || IsNull(noul.Criteria.True) && IsNull(noul.Criteria.False)))
+                        throw new TypeSafeError($"Noul question '{name}' requires instructions or at least one described outcome.");
                     EntryType.Validate(noul.Instructions, $"{name}.instructions");
                     if (noul.Criteria is not null)
                     {
@@ -135,16 +165,24 @@ public sealed class TypeSafeClient : IDisposable
                 case ScoreQuestion score:
                     Questions.Score(score.Instructions, score.Criteria);
                     break;
+                case BoxQuestion box:
+                    EntryType.Validate(box.Instructions, $"{name}.instructions");
+                    break;
                 default:
                     throw new TypeSafeError($"Question '{name}' has an unknown type.");
             }
         }
     }
 
+    private static bool IsNull(object? value) =>
+        value is null || value is JsonElement { ValueKind: JsonValueKind.Null };
+
+    private sealed record RequestBody(byte[] Bytes, string ContentType, bool Compressed);
+
     private async Task<ApiResponse<T>> SendAsync<T>(
         string path,
         HttpMethod method,
-        string? content,
+        RequestBody? content,
         Func<string, T> parser,
         RequestOptions? requestOptions,
         CancellationToken callerToken)
@@ -276,7 +314,7 @@ public sealed class TypeSafeClient : IDisposable
     private HttpRequestMessage CreateRequest(
         string path,
         HttpMethod method,
-        string? content,
+        RequestBody? content,
         IReadOnlyDictionary<string, string>? callHeaders,
         int attempt)
     {
@@ -284,7 +322,12 @@ public sealed class TypeSafeClient : IDisposable
             method,
             new Uri(_options.BaseUrl.AbsoluteUri.TrimEnd('/') + path));
         if (content is not null)
-            request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+        {
+            request.Content = new ByteArrayContent(content.Bytes);
+            request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(content.ContentType);
+            if (content.Compressed)
+                request.Content.Headers.ContentEncoding.Add("zstd");
+        }
 
         AddUnprotected(request, _options.DefaultHeaders);
         AddUnprotected(request, callHeaders);
@@ -562,14 +605,15 @@ public sealed class TypeSafeClient : IDisposable
             !root.TryGetProperty("model", out var model) || model.ValueKind != JsonValueKind.String ||
             !root.TryGetProperty("answers", out var answers) || answers.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("usage", out var usage) || usage.ValueKind != JsonValueKind.Object ||
-            !usage.TryGetProperty("input_tokens", out var input) || !input.TryGetInt32(out var inputTokens) ||
-            !usage.TryGetProperty("output_tokens", out var output) || !output.TryGetInt32(out var outputTokens))
+            !usage.TryGetProperty("input_tokens", out var input) || !TryTokenCount(input, out var inputTokens) ||
+            !usage.TryGetProperty("output_tokens", out var output) || !TryTokenCount(output, out var outputTokens))
             throw new TypeSafeError("Malformed System One response.");
 
         var parsedAnswers = new Dictionary<string, Answer>();
         foreach (var property in answers.EnumerateObject())
         {
-            if (!property.Value.TryGetProperty("type", out var typeElement) ||
+            if (property.Value.ValueKind != JsonValueKind.Object ||
+                !property.Value.TryGetProperty("type", out var typeElement) ||
                 typeElement.ValueKind != JsonValueKind.String)
                 throw new TypeSafeError($"Malformed answer '{property.Name}': missing type.");
 
@@ -583,6 +627,8 @@ public sealed class TypeSafeClient : IDisposable
                         ?? throw new JsonException("choice answer was null"),
                     "score" => property.Value.Deserialize(TypeInfo<ScoreAnswer>())
                         ?? throw new JsonException("score answer was null"),
+                    "box" => property.Value.Deserialize(TypeInfo<BoxAnswer>())
+                        ?? throw new JsonException("box answer was null"),
                     var type => throw new TypeSafeError(
                         $"Malformed answer '{property.Name}': unknown type '{type}'.")
                 };
@@ -592,6 +638,8 @@ public sealed class TypeSafeClient : IDisposable
                 if (answer is ScoreAnswer score &&
                     (score.Legend is null || score.Probabilities is null))
                     throw new JsonException("score answer is missing required fields");
+                if (answer is BoxAnswer { Box: null })
+                    throw new JsonException("box answer is missing coordinates");
                 parsedAnswers[property.Name] = answer;
             }
             catch (JsonException exception)
@@ -606,6 +654,19 @@ public sealed class TypeSafeClient : IDisposable
             Answers = parsedAnswers,
             Usage = new Usage { InputTokens = inputTokens, OutputTokens = outputTokens }
         };
+    }
+
+    private static bool TryTokenCount(JsonElement value, out int? count)
+    {
+        count = null;
+        if (value.ValueKind == JsonValueKind.Null)
+            return true;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number))
+        {
+            count = number;
+            return true;
+        }
+        return false;
     }
 
     private static JsonDocument ParseJson(string json, string description)

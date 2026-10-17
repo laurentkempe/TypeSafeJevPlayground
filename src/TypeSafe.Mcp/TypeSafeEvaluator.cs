@@ -84,6 +84,6 @@ public sealed class TypeSafeEvaluator(TypeSafeClientProvider provider)
             Confidence: score.Confidence,
             Probabilities: score.Probabilities,
             Legend: score.Legend),
-        _ => new AnswerResult(answer.Type)
+        BoxAnswer box => new AnswerResult(box.Type, Confidence: box.Confidence, Box: box.Box)
     };
 }

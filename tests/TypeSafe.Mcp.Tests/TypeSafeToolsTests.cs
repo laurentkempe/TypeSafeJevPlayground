@@ -7,6 +7,21 @@ namespace TypeSafe.Mcp.Tests;
 public class TypeSafeToolsTests
 {
     [Fact]
+    public async Task NullableUsageIsPreservedInMcpResults()
+    {
+        var (tools, _) = TestHarness.Create(TestHarness.NoulResponse
+            .Replace("\"input_tokens\":12", "\"input_tokens\":null")
+            .Replace("\"output_tokens\":1", "\"output_tokens\":null"));
+        var result = await tools.Noul("text", "Is it spam?");
+        Assert.Null(result.Usage.InputTokens);
+        Assert.Null(result.Usage.OutputTokens);
+        var json = JsonSerializer.Serialize(result, McpToolJson.Options);
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("usage").GetProperty("inputTokens").ValueKind);
+        Assert.Equal(JsonValueKind.Null, document.RootElement.GetProperty("usage").GetProperty("outputTokens").ValueKind);
+    }
+
+    [Fact]
     public async Task NoulSendsQuestionAndReturnsProbability()
     {
         var (tools, handler) = TestHarness.Create(TestHarness.NoulResponse);

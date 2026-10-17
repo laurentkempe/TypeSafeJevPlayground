@@ -1,0 +1,50 @@
+name: Upstream SDK drift
+
+on:
+  schedule:
+    - cron: '23 7 * * 1'
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Upstream tag or branch (blank checks latest stable release)'
+        required: false
+        type: string
+  pull_request:
+    paths:
+      - upstream.json
+      - scripts/Compare-Upstream.ps1
+      - .github/workflows/upstream-sdk.yml
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare pinned upstream source
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          $target = $env:TARGET_REF
+          if ($env:EVENT_NAME -eq 'pull_request') {
+            $target = (Get-Content upstream.json -Raw | ConvertFrom-Json).tag
+          }
+          .\scripts\Compare-Upstream.ps1 -TargetRef $target -OutputDirectory upstream-report -Check
+      - name: Publish review report
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path upstream-report/upstream-report.md) {
+            Get-Content upstream-report/upstream-report.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-report
+          path: upstream-report/
+          if-no-files-found: warn
