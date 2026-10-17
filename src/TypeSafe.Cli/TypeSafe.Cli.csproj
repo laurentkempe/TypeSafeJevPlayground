@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <LangVersion>15.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>TypeSafe.Cli</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>typesafe</ToolCommandName>
+    <RollForward>Major</RollForward>
+    <PackageId>TypeSafe.Cli</PackageId>
+    <PackageType>DotnetTool</PackageType>
+    <Version>0.1.0</Version>
+    <Description>Command-line interface for TypeSafe AI System One evaluations and model inspection.</Description>
+    <PackageTags>cli;tool;typesafe;ai;classification;scoring;evaluation</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/typesafe-ai/typesafe-sdk-dotnet</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsAotCompatible>true</IsAotCompatible>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TypeSafe\TypeSafe.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="TypeSafe.Cli.Tests" />
+  </ItemGroup>
+</Project>
