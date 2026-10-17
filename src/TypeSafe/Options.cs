@@ -20,6 +20,7 @@ public sealed class RetryOptions
 
 public sealed class TypeSafeClientOptions
 {
+    public bool Compression { get; set; } = true;
     public string? ApiKey { get; set; }
     public Uri? BaseUrl { get; set; }
     public string? DefaultModel { get; set; }
@@ -69,6 +70,7 @@ public sealed class TypeSafeClientOptions
             log,
             RetryPolicy.Default.Layer(Retry),
             headers,
+            Compression,
             Logger ?? new ConsoleTypeSafeLogger());
     }
 
@@ -112,6 +114,7 @@ internal sealed record ResolvedOptions(
     TypeSafeLogLevel LogLevel,
     RetryPolicy Retry,
     IReadOnlyDictionary<string, string>? DefaultHeaders,
+    bool Compression,
     ITypeSafeLogger? Logger);
 
 public sealed class RetryPolicy

@@ -147,7 +147,7 @@ static async Task EvaluateSupportTicketAsync(TypeSafeClient client, Cancellation
     foreach (var (name, answer) in result.Answers)
         Console.WriteLine($"  {name,-10} : {Describe(answer)}");
 
-    Console.WriteLine($"  usage      : {result.Usage.InputTokens} in / {result.Usage.OutputTokens} out");
+    Console.WriteLine($"  usage      : {result.Usage.InputTokens?.ToString() ?? "unknown"} in / {result.Usage.OutputTokens?.ToString() ?? "unknown"} out");
     Console.WriteLine();
 }
 
@@ -159,7 +159,10 @@ static string Describe(Answer answer) => answer switch
         $"[{string.Join(", ", choice.Probabilities.Select(p => $"{p.Key} {p.Value:P0}"))}]",
     ScoreAnswer score =>
         $"{score.Score:0.##} (confidence {score.Confidence:P1}) " +
-        $"legend: {JsonSerializer.Serialize(score.Legend)}"
+        $"legend: {JsonSerializer.Serialize(score.Legend)}",
+    BoxAnswer box =>
+        $"box top={box.Box.Top:0.###}, bottom={box.Box.Bottom:0.###}, left={box.Box.Left:0.###}, right={box.Box.Right:0.###} " +
+        $"(confidence {box.Confidence?.ToString("P1") ?? "unknown"})"
 };
 
 file sealed class ConsoleLogger : ITypeSafeLogger

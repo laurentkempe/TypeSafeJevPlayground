@@ -1,0 +1,22 @@
+{
+  "repository": "typesafe-ai/typesafe-sdk-js",
+  "version": "0.7.0",
+  "tag": "v0.7.0",
+  "commit": "b844cd1aca12855a5d24a2df52a1401c86e7d37a",
+  "previousTag": "v0.6.0",
+  "surfaces": [
+    { "upstream": "src/assets.ts", "local": ["src/TypeSafe/Assets.cs", "tests/TypeSafe.Tests/UpstreamParityTests.cs"] },
+    { "upstream": "src/client.ts", "local": ["src/TypeSafe/TypeSafeClient.cs", "src/TypeSafe/Options.cs", "tests/TypeSafe.Tests/TypeSafeClientTests.cs"] },
+    { "upstream": "src/compression.ts", "local": ["src/TypeSafe/TypeSafeClient.cs", "src/TypeSafe/Options.cs", "tests/TypeSafe.Tests/UpstreamParityTests.cs"] },
+    { "upstream": "src/questions.ts", "local": ["src/TypeSafe/Models.cs", "src/TypeSafe/TypeSafeClient.cs"] },
+    { "upstream": "src/types.ts", "local": ["src/TypeSafe/Models.cs", "src/TypeSafe.Mcp/Results.cs", "samples/TypeSafe.Sample/Program.cs"] },
+    { "upstream": "src/resources/models.ts", "local": ["src/TypeSafe/Models.cs", "src/TypeSafe/TypeSafeClient.cs"] },
+    { "upstream": "src/retry.ts", "local": ["src/TypeSafe/Options.cs", "src/TypeSafe/TypeSafeClient.cs"] },
+    { "upstream": "src/errors.ts", "local": ["src/TypeSafe/Errors.cs"] },
+    { "upstream": "src/logging.ts", "local": ["src/TypeSafe/Logging.cs"] },
+    { "upstream": "src/api-promise.ts", "local": ["src/TypeSafe/ApiResponse.cs", "src/TypeSafe/TypeSafeClient.cs"] },
+    { "upstream": "src/env.ts", "local": ["src/TypeSafe/Options.cs"] },
+    { "upstream": "src/runtime.ts", "local": ["src/TypeSafe/TypeSafeClient.cs"] },
+    { "upstream": "src/version.ts", "local": ["src/TypeSafe/TypeSafe.csproj", "src/TypeSafe/TypeSafeClient.cs"] }
+  ]
+}

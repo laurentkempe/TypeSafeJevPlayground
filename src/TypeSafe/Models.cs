@@ -7,6 +7,7 @@ namespace TypeSafe;
 [JsonDerivedType(typeof(NoulQuestion), "noul")]
 [JsonDerivedType(typeof(ChoiceQuestion), "choice")]
 [JsonDerivedType(typeof(ScoreQuestion), "score")]
+[JsonDerivedType(typeof(BoxQuestion), "box")]
 public closed record Question;
 
 public sealed record NoulCriteria
@@ -51,8 +52,21 @@ public sealed record ScoreQuestion : Question
     public required IReadOnlyList<object?> Criteria { get; init; }
 }
 
+public sealed record BoxQuestion : Question
+{
+    [JsonPropertyName("instructions")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public object? Instructions { get; init; }
+}
+
 public static class Questions
 {
+    public static BoxQuestion Box(object? instructions = null)
+    {
+        EntryType.Validate(instructions, nameof(instructions));
+        return new BoxQuestion { Instructions = instructions };
+    }
+
     public static NoulQuestion Noul(object? instructions = null, NoulCriteria? criteria = null)
     {
         EntryType.Validate(instructions, nameof(instructions));
@@ -70,7 +84,8 @@ public static class Questions
         IReadOnlyDictionary<string, object?> criteria)
     {
         EntryType.Validate(instructions, nameof(instructions));
-        ArgumentNullException.ThrowIfNull(criteria);
+        if (criteria is null)
+            throw new TypeSafeError("Choice criteria must be a nonempty map.");
         if (criteria.Count == 0)
             throw new TypeSafeError("Choice criteria cannot be empty.");
         foreach (var (key, value) in criteria)
@@ -86,7 +101,8 @@ public static class Questions
     public static ScoreQuestion Score(object? instructions, IReadOnlyList<object?> criteria)
     {
         EntryType.Validate(instructions, nameof(instructions));
-        ArgumentNullException.ThrowIfNull(criteria);
+        if (criteria is null)
+            throw new TypeSafeError("Score criteria must contain at least two entries.");
         if (criteria.Count < 2)
             throw new TypeSafeError("Score criteria must contain at least two entries.");
         for (var index = 0; index < criteria.Count; index++)
@@ -100,7 +116,7 @@ internal static class EntryType
 {
     public static void Validate(object? value, string name)
     {
-        if (value is null or string)
+        if (value is null or string or Image or TextWithAssets)
             return;
 
         if (value is JsonElement element &&
@@ -135,6 +151,9 @@ public sealed record SystemOneRequest
     [JsonPropertyName("model")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Model { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyDictionary<string, Image>? Assets { get; init; }
 
     [JsonExtensionData]
     public IDictionary<string, object?>? AdditionalProperties { get; init; }
@@ -188,10 +207,39 @@ public sealed record ScoreAnswer : Answer
 public sealed record Usage
 {
     [JsonPropertyName("input_tokens")]
-    public required int InputTokens { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required int? InputTokens { get; init; }
 
     [JsonPropertyName("output_tokens")]
-    public required int OutputTokens { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required int? OutputTokens { get; init; }
+}
+
+public sealed record BoxCoordinates
+{
+    [JsonPropertyName("top")]
+    public required double Top { get; init; }
+
+    [JsonPropertyName("bottom")]
+    public required double Bottom { get; init; }
+
+    [JsonPropertyName("left")]
+    public required double Left { get; init; }
+
+    [JsonPropertyName("right")]
+    public required double Right { get; init; }
+}
+
+public sealed record BoxAnswer : Answer
+{
+    public override string Type => "box";
+
+    [JsonPropertyName("box")]
+    public required BoxCoordinates Box { get; init; }
+
+    [JsonPropertyName("confidence")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required double? Confidence { get; init; }
 }
 
 public sealed record SystemOneResult
@@ -221,6 +269,7 @@ public sealed record ModelCard
 [JsonSourceGenerationOptions(
     JsonSerializerDefaults.Web,
     GenerationMode = JsonSourceGenerationMode.Metadata,
+    NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(SystemOneRequest))]
 [JsonSerializable(typeof(SystemOneResult))]
@@ -230,11 +279,16 @@ public sealed record ModelCard
 [JsonSerializable(typeof(NoulQuestion))]
 [JsonSerializable(typeof(ChoiceQuestion))]
 [JsonSerializable(typeof(ScoreQuestion))]
+[JsonSerializable(typeof(BoxQuestion))]
 [JsonSerializable(typeof(NoulCriteria))]
 [JsonSerializable(typeof(Answer))]
 [JsonSerializable(typeof(NoulAnswer))]
 [JsonSerializable(typeof(ChoiceAnswer))]
 [JsonSerializable(typeof(ScoreAnswer))]
+[JsonSerializable(typeof(BoxAnswer))]
+[JsonSerializable(typeof(BoxCoordinates))]
+[JsonSerializable(typeof(Image))]
+[JsonSerializable(typeof(TextWithAssets))]
 [JsonSerializable(typeof(Usage))]
 [JsonSerializable(typeof(string))]
 [JsonSerializable(typeof(bool))]

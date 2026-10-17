@@ -24,7 +24,7 @@ public sealed class TypeSafeClientTests
             Assert.Equal("/v1/systemone", request.RequestUri!.AbsolutePath);
             Assert.Equal("Bearer secret-value", request.Headers.Authorization!.ToString());
             Assert.Equal("application/json", request.Headers.Accept.Single().MediaType);
-            Assert.Equal("typesafe-sdk/0.6.0", request.Headers.GetValues("X-TypeSafe-SDK").Single());
+            Assert.Equal("typesafe-sdk/0.7.0", request.Headers.GetValues("X-TypeSafe-SDK").Single());
             body = await request.Content!.ReadAsStringAsync();
             return Response(HttpStatusCode.OK, ResultJson);
         });
@@ -112,7 +112,7 @@ public sealed class TypeSafeClientTests
         var handler = new StubHandler((request, _) =>
         {
             Assert.Equal("Bearer secret-value", request.Headers.Authorization!.ToString());
-            Assert.Equal("typesafe-sdk/0.6.0", request.Headers.UserAgent.ToString());
+            Assert.Equal("typesafe-sdk/0.7.0", request.Headers.UserAgent.ToString());
             Assert.Equal("application/json", request.Headers.Accept.Single().MediaType);
             Assert.Equal("call", request.Headers.GetValues("X-Custom").Single());
             Assert.Equal("application/json", request.Content!.Headers.ContentType!.MediaType);
