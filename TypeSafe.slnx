@@ -1,8 +1,10 @@
 <Solution>
   <Project Path="src/TypeSafe/TypeSafe.csproj" />
   <Project Path="src/TypeSafe.Mcp/TypeSafe.Mcp.csproj" />
+  <Project Path="src/TypeSafe.Cli/TypeSafe.Cli.csproj" />
   <Project Path="tests/TypeSafe.Tests/TypeSafe.Tests.csproj" />
   <Project Path="tests/TypeSafe.Mcp.Tests/TypeSafe.Mcp.Tests.csproj" />
+  <Project Path="tests/TypeSafe.Cli.Tests/TypeSafe.Cli.Tests.csproj" />
   <Project Path="samples/TypeSafe.Sample/TypeSafe.Sample.csproj" />
   <Project Path="samples/TypeSafe.Sample.Images/TypeSafe.Sample.Images.csproj" />
 </Solution>

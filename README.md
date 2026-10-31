@@ -224,8 +224,8 @@ Intentional platform differences: .NET keeps its explicit request types, native
 Task/cancellation and HttpClient ownership, and uses immutable in-memory image
 bytes instead of JavaScript Blob objects. The JavaScript Node 22 requirement and
 removed exported TypeScript payload types do not apply. The MCP tools remain
-text/JSON-oriented (no image upload or box tool); use the SDK for experimental
-vision calls. MCP results preserve nullable token counts.
+text/JSON-oriented (no image upload or box tool); use the SDK or the CLI
+(`typesafe box`, `--image`) for experimental vision calls. MCP results preserve nullable token counts.
 
 ## Sample console application
 
@@ -247,6 +247,39 @@ dotnet run --project samples/TypeSafe.Sample
 Point the sample at a different host with `TYPESAFE_BASE_URL`, or change the
 model with `TYPESAFE_DEFAULT_MODEL`. Press Ctrl+C to cancel an in-flight
 request; the sample surfaces this as `ApiUserAbortError`.
+
+## CLI tool (`TypeSafe.Cli`)
+
+`src/TypeSafe.Cli` is a high-performance, scriptable command-line interface for System One evaluations (`noul`, `choice`, `score`, `box`, `evaluate`) and model inspection (`models`). Packaged as the `typesafe` .NET global tool, it supports stdin/stdout piping, `@file` references, PNG/JPEG image inputs, formatted human output, and clean JSON output (`--json`) for automated pipelines and AI shell agents.
+
+```bash
+dotnet tool install -g TypeSafe.Cli
+```
+
+The tool command is `typesafe`. Configuration follows the standard hierarchy (`--api-key` / `TYPESAFE_API_KEY`, `--base-url` / `TYPESAFE_BASE_URL`, `--model` / `TYPESAFE_DEFAULT_MODEL`).
+
+### CLI Commands
+
+```bash
+# Binary yes/no classification
+typesafe noul "User requested account deletion" "Is this a GDPR compliance request?"
+
+# Unordered label routing
+typesafe choice @ticket.txt "Classify issue" -c auth="Auth problem" -c payment="Payment failed"
+
+# Ordered rubric rating
+typesafe score @incident.log "Rate incident severity" -l low -l medium -l high -l critical
+
+# Images (experimental): @image state or named --image assets, plus bounding boxes
+typesafe box @photo.jpg "Locate the dog"
+typesafe noul "Before: <before> After: <after>" "Was the damage repaired?" -i before=old.png -i after=new.png
+
+# JSON output for pipes and shell agents
+cat diff.patch | typesafe noul - "Does this diff introduce security risks?" --json | jq '.answers.result.noul'
+
+# Model inspection
+typesafe models
+```
 
 ## MCP server (`TypeSafe.Mcp`)
 
@@ -323,4 +356,5 @@ dotnet build TypeSafe.slnx -c Release
 dotnet test TypeSafe.slnx -c Release
 dotnet pack src/TypeSafe/TypeSafe.csproj -c Release
 dotnet pack src/TypeSafe.Mcp/TypeSafe.Mcp.csproj -c Release
+dotnet pack src/TypeSafe.Cli/TypeSafe.Cli.csproj -c Release
 ```
