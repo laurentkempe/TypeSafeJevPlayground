@@ -17,9 +17,15 @@ public static class InputReader
             var filePath = stateArgument[1..];
             if (File.Exists(filePath))
             {
-                var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
-                if (ImageInput.IsSupportedImage(bytes))
+                await using var stream = File.OpenRead(filePath);
+                var header = new byte[8];
+                var headerLength = await stream.ReadAtLeastAsync(
+                    header.AsMemory(), header.Length, throwOnEndOfStream: false, cancellationToken: cancellationToken).ConfigureAwait(false);
+                if (ImageInput.IsSupportedImage(header.AsSpan(0, headerLength)))
+                {
+                    var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false);
                     return new Image(bytes);
+                }
             }
         }
 
