@@ -86,11 +86,16 @@ public static class EvaluateCommand
 
                     questions = evalQuestions.ToDictionary(
                         pair => pair.Key,
-                        pair => pair.Value.ToQuestion(pair.Key));
+                        pair => pair.Value?.ToQuestion(pair.Key)
+                            ?? throw new CliValidationException($"Question '{pair.Key}' cannot be null."));
                 }
                 catch (JsonException ex)
                 {
                     throw new CliValidationException($"Failed to parse questions JSON: {ex.Message}", ex);
+                }
+                catch (TypeSafeError ex)
+                {
+                    throw new CliValidationException(ex.Message, ex);
                 }
 
                 await SystemOneRunner.RunAsync(context, globalOptions, client, effectiveState, questions, imageArguments, ct)
