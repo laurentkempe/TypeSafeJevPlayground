@@ -7,6 +7,8 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         var rootCommand = RootCommandBuilder.Build();
-        return await rootCommand.Parse(args, RootCommandBuilder.ParserConfiguration).InvokeAsync();
+        var parseResult = rootCommand.Parse(args, RootCommandBuilder.ParserConfiguration);
+        var exitCode = await parseResult.InvokeAsync();
+        return parseResult.Errors.Count > 0 ? 2 : exitCode;
     }
 }
